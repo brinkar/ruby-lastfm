@@ -185,6 +185,19 @@ XML
       track['toptags']['tag'].first['name'].should eql('pop')
     end
 
+    it 'should get correction' do
+      @lastfm.should_receive(:request).with('track.getCorrection', {
+          :artist => 'White Stripes',
+          :track => 'One More Cup of Coffee',
+          :username => 'wainekerr',
+        }).and_return(make_response('track_get_correction'))
+
+      correction = @lastfm.track.get_correction('White Stripes', 'One More Cup of Coffee', 'wainekerr')
+      correction['track']['name'].should eql('One More Cup of Coffee')
+      correction['track']['artist']['name'].should eql('The White Stripes')
+      correction['track']['url'].should eql('www.last.fm/music/The+White+Stripes/_/One+More+Cup+of+Coffee')
+    end
+
     it 'should get xml with force array option' do
       @lastfm.should_receive(:request).with('track.getInfo', {
           :artist => 'Cher',
@@ -345,8 +358,36 @@ XML
     end
   end
 
+  describe '#geo' do
+    it 'should return an instance of Lastfm::Geo' do
+      @lastfm.geo.should be_an_instance_of(Lastfm::MethodCategory::Geo)
+    end
+
+    it 'should get events' do
+      @lastfm.should_receive(:request).with('geo.getEvents', {
+        :location => 'Boulder',
+        :distance => nil,
+        :limit => nil,
+        :page => nil
+      }).and_return(make_response('geo_get_events'))
+
+      events = @lastfm.geo.get_events('Boulder')
+      events.size.should eql(1)
+      events[0]['title'].should eql('Transistor Festival')
+      events[0]['artists'].size.should == 2
+      events[0]['artists']['headliner'].should eql('Not Breathing')
+      events[0]['venue']['name'].should eql('The Walnut Room')
+      events[0]['venue']['location']['city'].should eql('Denver, CO')
+      events[0]['venue']['location']['point']['lat'].should eql("39.764316")
+      events[0]['image'].size.should eql(4)
+      events[0]['image'][0]['size'].should eql('small')
+      events[0]['image'][0]['content'].should eql('http://userserve-ak.last.fm/serve/34/166214.jpg')
+      events[0]['startDate'].should eql("Fri, 10 Jun 2011 01:58:01")
+    end
+  end
+
   describe '#user' do
-    it 'should return and instance of Lastfm::User' do
+    it 'should return an instance of Lastfm::User' do
       @lastfm.user.should be_an_instance_of(Lastfm::MethodCategory::User)
     end
 
@@ -371,7 +412,7 @@ XML
         friends[0]['name'].should eql('polaroide')
       end
     end
-    
+
     describe '#get_neighbours' do
       it 'should get user\'s neighbours' do
         @lastfm.should_receive(:request).with('user.getNeighbours', {
@@ -398,6 +439,25 @@ XML
         tracks = @lastfm.user.get_recent_tracks('test')
         tracks[1]['artist']['content'].should eql('Kylie Minogue')
         tracks.size.should == 2
+      end
+    end
+  end
+
+  describe '#library' do
+    it 'should return an instance of Lastfm::Library' do
+      @lastfm.library.should be_an_instance_of(Lastfm::MethodCategory::Library)
+    end
+
+    describe '#get_artists' do
+      it 'should get the artists\' info' do
+        @lastfm.should_receive(:request).with('library.getArtists', {
+          :user => 'test',
+          :limit => nil,
+          :page => nil
+        }).and_return(make_response('library_get_artists'))
+        artists = @lastfm.library.get_artists('test')
+        artists[1]['name'].should eql('Dark Castle')
+        artists.size.should == 2
       end
     end
   end
